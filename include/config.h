@@ -5,13 +5,13 @@
 // ============================================================
 
 // ---- Wi-Fi -------------------------------------------------
-#define WIFI_SSID     ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID     "xxxxxxxx"
+#define WIFI_PASSWORD "xxxxxxxx"
 
 // ---- Nightscout --------------------------------------------
 // Set the server host to its LAN IP address or hostname,
 // e.g. "192.168.1.20" or "raspberrypi.local"
-#define NIGHTSCOUT_HOST ""
+#define NIGHTSCOUT_HOST "xxx.xxx.xxx.xxx"
 #define NIGHTSCOUT_PORT 1337          // Nightscout default port
 #define NIGHTSCOUT_USE_HTTPS 0        // 0 = http (normal for local LAN)
 
