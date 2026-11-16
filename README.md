@@ -19,6 +19,12 @@ ESP32がWi-Fi経由でNightscoutに接続し、取得した情報を液晶に表
   <img src="images/sgv2.png" width="400" alt="時計の表示例">
 </p>
 
+<p align="center">
+  <img src="images/sgv3.png" width="400" alt="CYD の実表示例">
+</p>
+
+上の画像は、実際の CYD に表示される例で、現在値 145 mg/dL（緑）と HbA1c 推定値 6.7% を並べて表示した状態です。SGV はトレンド矢印と経過時間と併せて表示され、下段では時計や推定値が切り替わります。
+
 計算には次の式を使っています。
 GMI（%）= 3.31 + 0.02392 × 平均グルコース値（mg/dL）
 
