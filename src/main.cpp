@@ -104,9 +104,8 @@ static void connectWiFi() {
 }
 
 // ---- DHT22 / AM2302 (single-wire protocol read directly) -------
-// Same wiring as DHT11, but the data format differs: 16-bit
-// values with 0.1 resolution, temperature has a sign bit, and the
-// start signal low pulse must be 1-10ms (DHT11 used 18ms+).
+// The data format uses 16-bit values with 0.1 resolution, a
+// temperature sign bit, and a 1-10ms start signal low pulse.
 static bool waitLevel(int level, uint32_t timeoutUs) {
   uint32_t start = micros();
   while (digitalRead(DHT_PIN) != level) {
@@ -117,7 +116,7 @@ static bool waitLevel(int level, uint32_t timeoutUs) {
 
 static bool readDHT22(float &tempC, float &humi) {
   uint8_t data[5] = {0, 0, 0, 0, 0};
-  // start signal: pull low 2ms (DHT22 spec: 1-10ms), then release
+  // Start signal: pull low for 2ms, then release.
   pinMode(DHT_PIN, OUTPUT);
   digitalWrite(DHT_PIN, LOW);
   delay(2);
@@ -142,7 +141,7 @@ static bool readDHT22(float &tempC, float &humi) {
   humi = ((data[0] << 8) | data[1]) / 10.0f;
   int16_t raw = ((data[2] & 0x7F) << 8) | data[3];
   tempC = raw / 10.0f;
-  if (data[2] & 0x80) tempC = -tempC;    // sign bit for below 0
+  if (data[2] & 0x80) tempC = -tempC;
   return true;
 }
 
@@ -455,8 +454,9 @@ static void drawPanelDht() {
   // centred vertically in the panel. At this size the temperature
   // is shown as an integer - "24.5" in font 8 plus the unit would
   // be wider than the half panel it has to fit in.
-  String ts = g_dhtOk ? String((int)lroundf(g_tempC)) : "--";
-  String hs = g_dhtOk ? String((int)lroundf(g_humi)) : "--";
+  if (!g_dhtOk) return;
+  String ts = String((int)lroundf(g_tempC));
+  String hs = String((int)lroundf(g_humi));
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
@@ -484,7 +484,10 @@ static void drawPanelDht() {
 static void drawBottomPanel() {
   time_t now = time(nullptr);
   int mode = 0;                          // clock until NTP syncs
-  if (now > 1700000000) mode = (int)((now / 60) % 3);   // rotate each minute
+  if (now > 1700000000) {
+    int panelCount = g_dhtOk ? 3 : 2;
+    mode = (int)((now / 60) % panelCount);
+  }
 
   if (mode != g_shownPanelMode) {
     g_shownPanelMode = mode;
@@ -539,6 +542,20 @@ void setup() {
   tft.drawString("v8", 292, 88, 2);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
+  // Detect the optional sensor once at startup, allowing time for it
+  // to become ready. A missing sensor is not probed again until reboot.
+  for (int attempt = 0; attempt < 3; attempt++) {
+    float initialTemp, initialHumi;
+    if (readDHT22(initialTemp, initialHumi)) {
+      g_tempC = initialTemp;
+      g_humi = initialHumi;
+      g_dhtOk = true;
+      break;
+    }
+    if (attempt < 2) delay(2000);
+  }
+  g_lastDhtRead = millis();
+
   connectWiFi();
   fetchNightscout();
   g_lastFetch = millis();
@@ -590,11 +607,14 @@ void loop() {
     }
   }
 
-  // DHT22 read every 10 seconds (failures keep the last values)
-  if (nowMs - g_lastDhtRead >= 10000UL) {
+  // Keep updating readings only if the sensor was detected at startup.
+  if (g_dhtOk && nowMs - g_lastDhtRead >= 2000UL) {
     g_lastDhtRead = nowMs;
     float t, h;
-    if (readDHT22(t, h)) { g_tempC = t; g_humi = h; g_dhtOk = true; }
+    if (readDHT22(t, h)) {
+      g_tempC = t;
+      g_humi = h;
+    }
   }
 
   // elapsed time: drawMainArea repaints just that region when
